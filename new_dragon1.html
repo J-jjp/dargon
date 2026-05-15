@@ -1,0 +1,1033 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      transform: scale(0.5);
+      overflow: hidden;
+      transform-origin: top left;
+      width: 200%;  /* 配合缩放，保持内容完整 */
+      background: url("./background3.jpg") no-repeat center center fixed;
+      background-size: cover;
+       /* linear-gradient(145deg, #3b2e1e 0%, #5a4a2e 100%); */
+      font-family: 'Segoe UI', 'Noto Serif SC', '宋体', KaiTi, '宋体', STKaiti, serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+      margin: 0;
+    }
+
+    .spike-parts {
+      position: relative;
+      /* 清除原来的 flex 布局 */
+
+    }
+
+
+    .part-item {
+      width: 200px;        /* 固定宽度 */
+      height: 200px;       /* 固定高度 */
+      cursor: grab;
+      
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f7edd500;
+      padding: 8px 5px;
+      border-radius: 30px;
+      /* box-shadow: 0 8px 15px rgba(0,0,0,0.35), inset 0 0 5px white; */
+      border: 7px solid #6b4f2c;
+      transition: transform 0.2s ease;
+    }
+
+    .part-thumb {
+      width: 100px;
+      height: 60px;
+      object-fit: contain;
+    }
+
+    .part-label {
+      font-size: 30px;
+      margin-top: 4px;
+    }
+    .part-item:active {
+      cursor: grabbing;
+    }
+
+    .part-item.dragging {
+      opacity: 0.6;
+      transform: scale(0.92);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+
+    .part-thumb {
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      background: transparent;
+      filter: drop-shadow(0 6px 6px rgba(0,0,0,0.5));
+      pointer-events: none;
+      margin-bottom: 0.2rem;
+    }
+    .description {
+      background: #fdf8ed;
+      padding: 0.8rem 2.5rem;
+      border-radius: 3rem;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #3f2e13;
+      box-shadow: 0 8px 0 #7b5c3a, 0 10px 18px black;
+      border: 2px solid #a48147;
+      text-align: center;
+      margin-top: 0.8rem;
+      font-style: italic;
+      letter-spacing: 0.07rem;
+      line-height: 1.5;
+      background: #f3e1be;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .reset-btn {
+      margin-top: 1rem;
+      background: #c49a6c;
+      border: none;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2d2412;
+      padding: 0.5rem 2.5rem;
+      border-radius: 3rem;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #624a2c, 0 8px 14px black;
+      transition: all 0.1s ease;
+      border: 2px solid #fee6b0;
+      letter-spacing: 0.1rem;
+      background: #e4b280;
+    }
+
+    .reset-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #4c371b, 0 5px 12px black;
+    }
+
+    .coordinate-hint {
+      font-size: 0.9rem;
+      color: #3b2c15;
+      background: rgba(255,255,220,0.8);
+      padding: 0.2rem 1.2rem;
+      border-radius: 20px;
+      margin: 0.3rem 0;
+    }
+
+    .dragging-clone {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.85;
+      filter: drop-shadow(0 8px 15px rgba(0,0,0,0.5));
+      width: 80px;
+      height: 80px;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== 出场动画 ===== */
+    @keyframes slideDown {
+        0% { transform: translateY(-300px); }
+        100% { transform: translateY(0); }
+    }
+    @keyframes btnPopFromLeft {
+        0% { opacity: 0; transform: translate(-120px, 0); }
+        100% { opacity: 1; transform: translate(0, 0); }
+    }
+    @keyframes btnPopFromRight {
+        0% { opacity: 0; transform: translate(120px, 0); }
+        100% { opacity: 1; transform: translate(0, 0); }
+    }
+
+    .game-container {
+        animation: slideDown 0.8s ease-out 0.2s forwards;
+    }
+
+    .part-item {
+        opacity: 0;
+    }
+    .part-item.pop-from-left {
+        animation: btnPopFromLeft 0.5s ease-out forwards;
+    }
+    .part-item.pop-from-right {
+        animation: btnPopFromRight 0.5s ease-out forwards;
+    }
+
+    @media (max-width: 768px) {
+      .game-container {
+        padding: 1rem 0.8rem;
+      }
+      .spike-parts {
+        gap: 1rem;
+        padding: 1rem;
+      }
+      .part-thumb {
+        width: 60px;
+        height: 60px;
+      }
+      .part-item {
+        min-width: 90px;
+        padding: 0.6rem 0.8rem;
+      }
+      h2 {
+        font-size: 2rem;
+      }
+    }
+
+    /* ===== 退场动画（同 new_dragon3） ===== */
+    #completionMessage {
+        display: none;
+        opacity: 0;
+        transition: opacity 1s ease;
+    }
+    #completionMessage.show {
+        display: block;
+        opacity: 1;
+    }
+    #completionMessage.exit-down {
+        transform: translate(-50%, 200vh) !important;
+        transition: transform 1.2s ease-in !important;
+    }
+    #completionLeft,
+    #completionRight {
+        display: none;
+    }
+    #completionLeft.show,
+    #completionRight.show {
+        display: block;
+        opacity: 1;
+    }
+    #completionLeft.exit-left {
+        transform: translateY(-50%) translateX(-3000px) !important;
+        transition: transform 1.8s ease-in !important;
+    }
+    #completionRight.exit-right {
+        transform: translateY(-50%) translateX(3000px) !important;
+        transition: transform 1.8s ease-in !important;
+    }
+    .game-container.exit-down {
+        animation: none;
+        transform: translateY(250vh);
+        transition: transform 1.8s ease-in;
+    }
+    @keyframes zoomScene {
+        0% { transform: scale(1.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .scene-wrapper.zoom-appear {
+        animation: zoomScene 1.3s ease-out forwards;
+    }
+    #spikePanel.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div class="scene-wrapper">
+<div class="game-container">
+<h2 style="position: absolute; left: 1450px; top: 150px; font-size: 90px; width: 500px; line-height: 1.2; font-family: '黑体', 'SimHei', sans-serif;">
+
+  剑龙
+  </h2>
+  <h3 style="position: absolute; left: 1180px; top: 300px; font-size: 48px; width: 1000px; line-height: 1.2;font-family: '黑体', 'SimHei', sans-serif;">
+
+  剑龙亚目背上一排版，尾巴四根刺
+<h3>
+  <h4 style="position: absolute; left: 820px; top: 350px; font-size: 41px; width: 1700px; line-height: 1.2;font-family: '黑体', 'SimHei', sans-serif;">
+
+    Stegosauria have a row of plates on their backs and four spikes on their tails
+    <h4>
+  <div class="canvas-wrapper">
+    <canvas id="gameCanvas" width="3200" height="1400" aria-label="甲龙拼图游戏画布"></canvas>
+  </div>
+
+  <div id="completionMessage" style="
+      position: absolute;
+      top: 115%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #000;
+      font-size: 30px;
+      font-weight: bold;
+      font-family: '黑体', 'Noto Serif SC', serif;
+      z-index: 100;
+      pointer-events: none;
+      transition: opacity 1s ease;
+  ">
+      <p>剑龙是生活在侏罗纪晚期的植食性恐龙，因背部排列着巨大骨板、尾部带有尖刺，被称为“侏罗纪带刺坦克”。它既特指剑龙属（Stegosaurus），也可泛指所有剑龙科恐龙。</p>
+      <p style="font-size: 30px; margin-top: 30px;">体型数据：体长约7-9米，体重约2-4吨，前肢短后肢长，行动缓慢，重心偏低。</p>
+      <p style="font-size: 30px; margin-top: 10px;">生活习性：以低矮蕨类、苏铁等柔软植物为食，遇到掠食者时会甩动尾刺进行防御反击。</p>
+      <p style="font-size: 30px; margin-top: 10px;">主要分布：剑龙属化石主要发现于北美洲（美国科罗拉多州、怀俄明州），部分亚洲地区也有剑龙科近缘类群化石出土。</p>
+  </div>
+
+  <!-- 刺按钮面板 -->
+<div class="spike-parts" id="spikePanel">
+  <div class="part-item" data-part="head" draggable="false" style="position: absolute; left: 1000px; top: 80px;">
+    <img src="./tou1.png" alt="头部刺" class="part-thumb">
+    <span class="part-label">头部刺</span>
+  </div>
+  <div class="part-item" data-part="body" draggable="false" style="position: absolute; left: 1500px; top: 80px;">
+    <img src="./fubu1.png" alt="身体刺" class="part-thumb">
+    <span class="part-label">身体刺</span>
+  </div>
+  <div class="part-item" data-part="tail" draggable="false" style="position: absolute; left: 2000px; top: 80px;">
+    <img src="./weiba1.png" alt="尾巴刺" class="part-thumb">
+    <span class="part-label">尾巴刺</span>
+  </div>
+  <div class="part-item" data-part="body1" draggable="false" style="position: absolute; left: 100px; top: -1000px;">
+    <img src="./41.png" alt="11" class="part-thumb">
+    <span class="part-label">body1</span>
+  </div>
+  <div class="part-item" data-part="body2" draggable="false" style="position: absolute; left: 100px; top: -500px;">
+    <img src="./42.png" alt="22" class="part-thumb">
+    <span class="part-label">body2</span>
+  </div>
+  <div class="part-item" data-part="body3" draggable="false" style="position: absolute; left: 100px; top: -00px;">
+    <img src="./43.png" alt="33" class="part-thumb">
+    <span class="part-label">body3</span>
+  </div>
+  <div class="part-item" data-part="body4" draggable="false" style="position: absolute; left: 2900px; top: -1000px;">
+    <img src="./44.png" alt="44" class="part-thumb">
+    <span class="part-label">body4</span>
+  </div>
+  <div class="part-item" data-part="body5" draggable="false" style="position: absolute; left: 2900px; top: -500px;">
+    <img src="./45.png" alt="55" class="part-thumb">
+    <span class="part-label">body5</span>
+  </div>
+  <div class="part-item" data-part="body6" draggable="false" style="position: absolute; left: 2900px; top: -0px;">
+    <img src="./46.png" alt="66" class="part-thumb">
+    <span class="part-label">body6</span>
+  </div>
+</div>
+
+
+  <!-- <button class="reset-btn" id="resetButton">⟳ 重置位置</button> -->
+
+
+
+</div>
+
+<div id="completionLeft" style="
+    position: absolute;
+    top: 89%;
+    left: 0%;
+    transform: translateY(-50%);
+    text-align: left;
+    color: #000;
+    font-size: 300px;
+    font-weight: bold;
+    font-family: '黑体', 'SimHei', sans-serif;
+    z-index: 100;
+    pointer-events: none;
+    letter-spacing: 20px;
+    transition: opacity 1s ease;
+">ANKYLO</div>
+  <div id="completionRight" style="
+      position: absolute;
+      top: 89%;
+      left: 65%;
+      transform: translateY(-50%);
+      text-align: left;
+      color: #000;
+      font-size: 300px;
+      font-weight: bold;
+      font-family: '黑体', 'SimHei', sans-serif;
+      z-index: 100;
+      pointer-events: none;
+      letter-spacing: 20px;
+      transition: opacity 1s ease;
+  "> SAURUS</div>
+</div>
+
+<script>
+  (function() {
+
+
+      // ===== 吸附配置 =====
+    let testMode = false;  // 测试模式开关
+    // 每个刺的独立吸附距离（像素）
+    const snapDistance = {
+      head: 50,   // 头部刺吸附距离
+      body: 80,   // 身体刺吸附距离
+      tail: 60,    // 尾巴刺吸附距离
+      body1: 60,    // 尾巴刺吸附距离
+      body2: 60,    // 尾巴刺吸附距离
+      body3: 60,    // 尾巴刺吸附距离
+      body4: 60,    // 尾巴刺吸附距离
+      body5: 60,    // 尾巴刺吸附距离
+      body6: 60,    // 尾巴刺吸附距离
+
+    };
+    // 可改：吸附位置
+    const snapTargets = {
+      head: { x: 1425, y: 690 },
+      body: { x: 1920, y: 800 },
+      tail: { x: 2400, y: 1000 },
+      body1: { x: 1100, y: 872 },
+      body2: { x: 1665, y: 810 },
+      body3: { x: 2015, y: 850 },
+      body4: { x: 1128, y: 1100 },
+      body5: { x: 1670, y: 1100 },
+      body6: { x: 2255, y: 1042 },
+
+    };
+
+    // 不用改
+    const buttonReturnPositions = {
+      head: { x: -800, y: -500 },
+      body: { x: -1600, y: -600 },
+      tail: { x: 2400, y: 700 },
+      body1: { x: 2400, y: 700 },
+      body2: { x: 2400, y: 700 },
+      body3: { x: 2400, y: 700 },
+      body4: { x: 2400, y: 700 },
+      body5: { x: 2400, y: 700 },
+      body6: { x: 2400, y: 700 },
+    };
+    //不用改
+    const spikePositions = {
+      head: { x: 800, y: 500 },
+      body: { x: 1600, y: 600 },
+      tail: { x: 2400, y: 700 },
+      body1: { x: 2400, y: 700 },
+      body2: { x: 2400, y: 700 },
+      body3: { x: 2400, y: 700 },
+      body4: { x: 2400, y: 730 },
+      body5: { x: 2400, y: 700 },
+      body6: { x: 2400, y: 700 },
+    };
+
+  
+    // 原有的统一大小配置保持不变（用于碰撞检测、光圈等）
+    const spikeSizes = {
+      head: 400,
+      body: 600,
+      tail: 600,
+      body1: 350,
+      body2: 350,
+      body3: 350,
+      body4: 350,
+      body5: 350,
+      body6: 350
+    };
+
+    // 可改：大小
+    const spikeDisplaySize = {
+      head: { width: 1550, height: 900 },
+      body: { width: 1470, height: 900 },
+      tail: { width: 750, height: 550 },
+      body1: { width: 620, height: 400 },
+      body2: { width: 610, height: 402 },
+      body3: { width: 635, height: 400 },
+      body4: { width: 600, height: 350 },
+      body5: { width: 615, height: 360 },
+      body6: { width: 610, height: 340 }
+    };
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const ankylosaurusImg = new Image();
+    const spikeImages = {
+      head: new Image(),
+      body: new Image(),
+      tail: new Image(),
+      body1: new Image(),
+      body2: new Image(),
+      body3: new Image(),
+      body4: new Image(),
+      body5: new Image(),
+      body6: new Image()
+    };
+
+    // ===== 图片路径 =====
+    ankylosaurusImg.src = "./long4.png";
+    spikeImages.head.src = "./tou1.png";
+    spikeImages.body.src = "./fubu1.png";
+    spikeImages.tail.src = "./weiba1.png";
+    spikeImages.body1.src = "./41.png";
+    spikeImages.body2.src = "./42.png";
+    spikeImages.body3.src = "./43.png";
+    spikeImages.body4.src = "./44.png";
+    spikeImages.body5.src = "./45.png";
+    spikeImages.body6.src = "./46.png";
+
+
+
+    const spikePlaced = {
+      head: false,
+      body: false,
+      tail: false,
+      body1: false,
+      body2: false,
+      body3: false,
+      body4: false,
+      body5: false,
+      body6: false
+    };
+
+    let selectedPart = null;
+    let isDragging = false;
+    let dragPart = null;
+    let dragClone = null;
+
+    let imagesLoaded = false;
+    let totalImages = 10;
+    let loadedCount = 0;
+
+    function imageLoaded() {
+      loadedCount++;
+      if (loadedCount >= totalImages) {
+        imagesLoaded = true;
+        drawCanvas();
+      }
+    }
+
+    ankylosaurusImg.onload = imageLoaded;
+    spikeImages.head.onload = imageLoaded;
+    spikeImages.body.onload = imageLoaded;
+    spikeImages.tail.onload = imageLoaded;
+    spikeImages.body1.onload = imageLoaded;
+    spikeImages.body2.onload = imageLoaded;
+    spikeImages.body3.onload = imageLoaded;
+    spikeImages.body4.onload = imageLoaded;
+    spikeImages.body5.onload = imageLoaded;
+    spikeImages.body6.onload = imageLoaded;
+
+
+    ankylosaurusImg.onerror = function() {
+      console.warn('甲龙图片加载失败: ./long4.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.tail.onerror = function() {
+      console.warn('尾巴刺图片加载失败: ./weiba1.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body1.onerror = function() {
+      console.warn('图片加载失败: ./41.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body2.onerror = function() {
+      console.warn('图片加载失败: ./42.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body3.onerror = function() {
+      console.warn('图片加载失败: ./43.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body4.onerror = function() {
+      console.warn('图片加载失败: ./44.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body5.onerror = function() {
+      console.warn('图片加载失败: ./45.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body6.onerror = function() {
+      console.warn('图片加载失败: ./46.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.head.onerror = function() {
+      console.warn('头部刺图片加载失败: ./tou1.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+    spikeImages.body.onerror = function() {
+      console.warn('身体刺图片加载失败: ./fubu1.png');
+      loadedCount++;
+      if (loadedCount >= totalImages) imagesLoaded = true;
+      drawCanvas();
+    };
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 绘制甲龙（适配3200x1400）
+      if (ankylosaurusImg.complete && ankylosaurusImg.naturalWidth > 0) {
+        ctx.drawImage(ankylosaurusImg, 650, 330, 1956,1184);
+      } else {
+        // 后备图形
+        ctx.fillStyle = '#7a8b5a';
+        ctx.beginPath();
+        ctx.ellipse(1600, 700, 800, 400, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#3d4f1e';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.fillStyle = '#2d3b0e';
+        ctx.beginPath();
+        ctx.arc(800, 600, 150, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#6d7e45';
+        ctx.beginPath();
+        ctx.arc(2400, 750, 120, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      // 绘制已放置的刺
+      for (let part of ['body1','body2','body3','body4','body5','body6','head', 'body', 'tail']) {
+        if (!spikePlaced[part]) continue;
+        const img = spikeImages[part];
+        const pos = spikePositions[part];
+        const size = spikeSizes[part];  // 使用各自的大小
+        
+        if (img.complete && img.naturalWidth > 0) {
+          const display = spikeDisplaySize[part];
+          ctx.drawImage(img, pos.x - display.width/2, pos.y - display.height/2, display.width, display.height);
+        }
+        else {
+          ctx.fillStyle = '#7a5d3b';
+          ctx.beginPath();
+          ctx.ellipse(pos.x, pos.y, size/4, size/3, 0, 0, Math.PI*2);
+          ctx.fill();
+          ctx.strokeStyle = '#331f0d';
+          ctx.stroke();
+        }
+
+        // 选中光圈，根据各自大小调整
+        if (selectedPart === part && spikePlaced[part]) {
+          ctx.save();
+          ctx.strokeStyle = '#FFD966';
+          ctx.lineWidth = 5;
+          ctx.shadowColor = '#FFB703';
+          ctx.shadowBlur = 15;
+          ctx.beginPath();
+        //   ctx.arc(pos.x, pos.y, size/2 + 10, 0, 2 * Math.PI);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    function getPartAtCoordinate(mx, my) {
+      const parts = ['tail', 'body', 'head','body1','body2','body3','body4','body5','body6'];
+      for (let part of parts) {
+        if (!spikePlaced[part]) continue;
+        const pos = spikePositions[part];
+        const size = spikeSizes[part];  // 使用各自的大小进行碰撞检测
+        const dx = mx - pos.x;
+        const dy = my - pos.y;
+        if (Math.sqrt(dx*dx+dy*dy) <= size/2 + 8) {
+          return part;
+        }
+      }
+      return null;
+    }
+
+    function getCanvasCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      let clientX, clientY;
+      if (e.touches) {
+        if (e.touches.length === 0) return null;
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      return {
+        x: Math.min(Math.max((clientX - rect.left) * scaleX, 0), canvas.width),
+        y: Math.min(Math.max((clientY - rect.top) * scaleY, 0), canvas.height)
+      };
+    }
+
+    function updatePanelSelection() {
+      document.querySelectorAll('.part-item').forEach(item => {
+        const part = item.getAttribute('data-part');
+        item.classList.toggle('selected', part === selectedPart && spikePlaced[part]);
+      });
+    }
+
+    function startDragFromButton(partType, e) {
+      e.preventDefault();
+      if (spikePlaced[partType]) spikePlaced[partType] = false;
+      dragPart = partType;
+      selectedPart = partType;
+      isDragging = true;
+      createDragClone(partType, e);
+      updatePanelSelection();
+      const btn = document.querySelector(`.part-item[data-part="${partType}"]`);
+      if (btn) btn.classList.add('dragging');
+      drawCanvas();
+      updateDragClonePosition(e);
+    }
+
+    function createDragClone(partType, e) {
+      removeDragClone();
+      dragClone = document.createElement('img');
+      dragClone.src = spikeImages[partType].src;
+      dragClone.className = 'dragging-clone';
+      // 根据刺的大小调整拖拽预览大小
+      const size = spikeSizes[partType];
+    //   const previewSize = Math.min(size/4, 150); // 限制预览大小
+      dragClone.style.width = previewSize + 'px';
+      dragClone.style.height = previewSize + 'px';
+      document.body.appendChild(dragClone);
+      updateDragClonePosition(e);
+    }
+
+    function updateDragClonePosition(e) {
+      if (!dragClone) return;
+      let cx, cy;
+      if (e.touches && e.touches.length > 0) {
+        cx = e.touches[0].clientX;
+        cy = e.touches[0].clientY;
+      } else if (e.clientX !== undefined) {
+        cx = e.clientX;
+        cy = e.clientY;
+      } else return;
+      dragClone.style.left = cx + 'px';
+      dragClone.style.top = cy + 'px';
+    }
+
+    function removeDragClone() {
+      if (dragClone) { dragClone.remove(); dragClone = null; }
+    }
+
+    function isPointInCanvas(e) {
+      const rect = canvas.getBoundingClientRect();
+      let cx, cy;
+      if (e.touches && e.touches.length > 0) {
+        cx = e.touches[0].clientX;
+        cy = e.touches[0].clientY;
+      } else {
+        cx = e.clientX;
+        cy = e.clientY;
+      }
+      return cx >= rect.left && cx <= rect.right && cy >= rect.top && cy <= rect.bottom;
+    }
+
+    function handleDragMove(e) {
+      e.preventDefault();
+      if (!isDragging || !dragPart) return;
+      updateDragClonePosition(e);
+      const pos = getCanvasCoordinates(e);
+      if (pos && isPointInCanvas(e)) {
+        spikePositions[dragPart].x = pos.x;
+        spikePositions[dragPart].y = pos.y;
+        spikePlaced[dragPart] = true;
+        drawCanvas();
+      }
+    }
+
+function handleDragEnd(e) {
+    e.preventDefault();
+    if (!isDragging) return;
+    
+    const pos = getCanvasCoordinates(e);
+    
+    if (pos && isPointInCanvas(e) && dragPart) {
+      // 计算拖拽结束位置与吸附目标的距离
+      const target = snapTargets[dragPart];
+      const dx = pos.x - target.x;
+      const dy = pos.y - target.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance <= snapDistance[dragPart]) {
+        // 在吸附范围内 → 图片中心自动吸附到目标坐标
+        spikePositions[dragPart].x = target.x;
+        spikePositions[dragPart].y = target.y;
+        spikePlaced[dragPart] = true;
+        selectedPart = dragPart;
+      } else {
+        // 超出范围 → 弹回按钮区
+        const returnPos = buttonReturnPositions[dragPart];
+        spikePositions[dragPart].x = returnPos.x;
+        spikePositions[dragPart].y = returnPos.y;
+        spikePlaced[dragPart] = false;
+        selectedPart = null;
+      }
+    } else if (dragPart) {
+      // 拖到画布外 → 弹回
+      const returnPos = buttonReturnPositions[dragPart];
+      spikePositions[dragPart].x = returnPos.x;
+      spikePositions[dragPart].y = returnPos.y;
+      spikePlaced[dragPart] = false;
+    }
+    
+    const btn = document.querySelector(`.part-item[data-part="${dragPart}"]`);
+    if (btn) btn.classList.remove('dragging');
+    isDragging = false;
+    dragPart = null;
+    removeDragClone();
+    updatePanelSelection();
+    drawCanvas();
+    checkAllPartsPlaced();
+}
+
+function handleCanvasDragEnd(e) {
+  if (!isDragging || !dragPart) return;
+  e.preventDefault();
+  
+  const pos = getCanvasCoordinates(e);
+  
+  if (pos) {
+    const target = snapTargets[dragPart];
+    const dx = pos.x - target.x;
+    const dy = pos.y - target.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance <= snapDistance[dragPart]) {
+      // 图片中心吸附到目标坐标
+      spikePositions[dragPart].x = target.x;
+      spikePositions[dragPart].y = target.y;
+      spikePlaced[dragPart] = true;
+    } else {
+      const returnPos = buttonReturnPositions[dragPart];
+      spikePositions[dragPart].x = returnPos.x;
+      spikePositions[dragPart].y = returnPos.y;
+      spikePlaced[dragPart] = false;
+    }
+  }
+  
+  const btn = document.querySelector(`.part-item[data-part="${dragPart}"]`);
+  if (btn) btn.classList.remove('dragging');
+  selectedPart = dragPart;
+  isDragging = false;
+  dragPart = null;
+  updatePanelSelection();
+  drawCanvas();
+  checkAllPartsPlaced();
+}
+
+function checkAllPartsPlaced() {
+    const allPlaced = Object.values(spikePlaced).every(placed => placed === true);
+    if (!allPlaced) return;
+
+    const panel = document.getElementById('spikePanel');
+    if (panel) {
+        panel.classList.add('hidden');
+    }
+    const msg = document.getElementById('completionMessage');
+    if (msg) {
+        msg.classList.add('show');
+    }
+    const leftMsg = document.getElementById('completionLeft');
+    const rightMsg = document.getElementById('completionRight');
+    if (leftMsg) leftMsg.classList.add('show');
+    if (rightMsg) rightMsg.classList.add('show');
+
+    const container = document.querySelector('.game-container');
+    const sceneWrapper = document.querySelector('.scene-wrapper');
+
+    // 整场从大缩到正常
+    sceneWrapper.classList.add('zoom-appear');
+
+    setTimeout(() => {
+        sceneWrapper.style.animation = 'none';
+        container.style.animation = 'none';
+        void sceneWrapper.offsetHeight;
+
+        container.classList.add('exit-down');
+        leftMsg.classList.add('exit-left');
+        rightMsg.classList.add('exit-right');
+
+        setTimeout(() => {
+            window.location.href = "index.html";
+        }, 2500);
+    }, 2000);
+}
+
+    function handleCanvasClick(e) {
+      if (isDragging) return;
+      const pos = getCanvasCoordinates(e);
+      if (!pos) return;
+      const part = getPartAtCoordinate(pos.x, pos.y);
+      selectedPart = part || null;
+      updatePanelSelection();
+      drawCanvas();
+    }
+
+    function handleCanvasDragStart(e) {
+      if (isDragging) return;
+      const pos = getCanvasCoordinates(e);
+      if (!pos) return;
+      const part = getPartAtCoordinate(pos.x, pos.y);
+      if (part) {
+        e.preventDefault();
+        dragPart = part;
+        selectedPart = part;
+        isDragging = true;
+        const btn = document.querySelector(`.part-item[data-part="${part}"]`);
+        if (btn) btn.classList.add('dragging');
+        updatePanelSelection();
+        drawCanvas();
+      }
+    }
+
+    function handleCanvasDragMove(e) {
+      if (!isDragging || !dragPart) return;
+      e.preventDefault();
+      const pos = getCanvasCoordinates(e);
+      if (pos) {
+        spikePositions[dragPart].x = pos.x;
+        spikePositions[dragPart].y = pos.y;
+        drawCanvas();
+      }
+    }
+
+
+
+
+    function resetPositions() {
+      spikePositions.head.x = 800;
+      spikePositions.head.y = 500;
+      spikePositions.body.x = 1600;
+      spikePositions.body.y = 600;
+      spikePositions.tail.x = 2400;
+      spikePositions.tail.y = 700;
+      spikePositions.body1.x = 2400;
+      spikePositions.body1.y = 700;
+      spikePositions.body2.x = 2400;
+      spikePositions.body2.y = 700;
+      spikePositions.body3.x = 2400;
+      spikePositions.body3.y = 700;
+      spikePositions.body4.x = 2400;
+      spikePositions.body4.y = 700;
+      spikePositions.body5.x = 2400;
+      spikePositions.body5.y = 700;
+      spikePositions.body6.x = 2400;
+      spikePositions.body6.y = 700;
+      spikePlaced.head = false;
+      spikePlaced.body = false;
+      spikePlaced.tail = false;
+      spikePlaced.body1 = false;
+      spikePlaced.body2 = false;
+      spikePlaced.body3 = false;
+      spikePlaced.body4 = false;
+      spikePlaced.body5 = false;
+      spikePlaced.body6 = false;
+
+
+
+      selectedPart = null;
+      updatePanelSelection();
+      drawCanvas();
+    }
+
+    function bindEvents() {
+      const panel = document.getElementById('spikePanel');
+      panel.addEventListener('mousedown', e => {
+        const item = e.target.closest('.part-item');
+        if (!item) return;
+        const part = item.getAttribute('data-part');
+        if (part) startDragFromButton(part, e);
+      });
+      panel.addEventListener('touchstart', e => {
+        const item = e.target.closest('.part-item');
+        if (!item) return;
+        const part = item.getAttribute('data-part');
+        if (part) startDragFromButton(part, e);
+      }, { passive: false });
+
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleDragMove, { passive: false });
+      window.addEventListener('touchend', handleDragEnd);
+      window.addEventListener('touchcancel', handleDragEnd);
+
+      canvas.addEventListener('mousedown', e => {
+        const pos = getCanvasCoordinates(e);
+        if (!pos) return;
+        if (getPartAtCoordinate(pos.x, pos.y)) handleCanvasDragStart(e);
+        else handleCanvasClick(e);
+      });
+      canvas.addEventListener('touchstart', e => {
+        const pos = getCanvasCoordinates(e);
+        if (!pos) return;
+        if (getPartAtCoordinate(pos.x, pos.y)) handleCanvasDragStart(e);
+        else handleCanvasClick(e);
+      }, { passive: false });
+
+      canvas.addEventListener('mousemove', handleCanvasDragMove);
+      canvas.addEventListener('touchmove', handleCanvasDragMove, { passive: false });
+      canvas.addEventListener('mouseup', handleCanvasDragEnd);
+      canvas.addEventListener('touchend', handleCanvasDragEnd);
+      canvas.addEventListener('touchcancel', handleCanvasDragEnd);
+
+      window.addEventListener('mouseleave', () => {
+        if (dragClone) handleDragEnd(new MouseEvent('mouseup'));
+      });
+
+      const resetBtn = document.getElementById('resetButton');
+      if (resetBtn) resetBtn.addEventListener('click', resetPositions);
+    }
+
+    window.addEventListener('load', () => {
+      bindEvents();
+
+      // ===== 出场动画 =====
+      drawCanvas();
+
+      // 等图片完全加载后触发按钮弹出动画
+      let animInterval = setInterval(() => {
+        if (!imagesLoaded) { drawCanvas(); return; }
+        clearInterval(animInterval);
+
+        // 按钮从画布边缘向各自位置弹出
+        const canvasCenterX = 1600;
+        const items = document.querySelectorAll('.part-item');
+        items.forEach((item, index) => {
+          const left = parseInt(item.style.left) || 0;
+          const className = left < canvasCenterX ? 'pop-from-left' : 'pop-from-right';
+          setTimeout(() => {
+            item.classList.add(className);
+          }, 400 + index * 80);
+        });
+      }, 50);
+      setTimeout(() => clearInterval(animInterval), 8000);
+
+      // 原有的定时重绘
+      const interval = setInterval(() => {
+        if (imagesLoaded) { drawCanvas(); clearInterval(interval); }
+        else drawCanvas();
+      }, 100);
+      setTimeout(() => clearInterval(interval), 5000);
+    });
+
+    if (ankylosaurusImg.complete) imageLoaded();
+    for (let p of ['head','body','tail','body1','body2','body3','body4','body5','body6']) {
+      if (spikeImages[p].complete) imageLoaded();
+    }
+  })();
+</script>
+</body>
+</html>
