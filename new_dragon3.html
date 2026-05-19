@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -465,7 +465,12 @@
     spikeImages.body5.src = "./35.png";
     spikeImages.body6.src = "./36.png";
 
-
+// ===== 音效预加载（预先加载到缓存，播放无延迟） =====
+var audioSnap = new Audio("D:/抠图/pp.mp3");
+audioSnap.preload = "auto";
+var audioZoom = new Audio("D:/抠图/dd.mp3");
+audioZoom.preload = "auto";
+function playSound(a) { try { a.cloneNode().play(); } catch(e) {} }
 
     const spikePlaced = {
       head: false,
@@ -761,6 +766,8 @@ function handleDragEnd(e) {
         spikePositions[dragPart].y = target.y;
         spikePlaced[dragPart] = true;
         selectedPart = dragPart;
+        // 吸附成功音效
+        playSound(audioSnap);
       } else {
         // 超出范围 → 弹回按钮区
         const returnPos = buttonReturnPositions[dragPart];
@@ -804,6 +811,8 @@ function handleCanvasDragEnd(e) {
       spikePositions[dragPart].x = target.x;
       spikePositions[dragPart].y = target.y;
       spikePlaced[dragPart] = true;
+      // 吸附成功音效
+      playSound(audioSnap);
     } else {
       const returnPos = buttonReturnPositions[dragPart];
       spikePositions[dragPart].x = returnPos.x;
@@ -842,6 +851,9 @@ function checkAllPartsPlaced() {
 
     const container = document.querySelector('.game-container');
     const sceneWrapper = document.querySelector('.scene-wrapper');
+
+    // 播放音效
+    playSound(audioZoom);
 
     // 整场从大缩到正常
     sceneWrapper.classList.add('zoom-appear');
